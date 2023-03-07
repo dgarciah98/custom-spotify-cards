@@ -1,0 +1,10 @@
+use_field_init_shorthand = true
+use_small_heuristics = "Max"
+fn_args_layout = "Compressed"
+
+comment_width = 100
+format_code_in_doc_comments = true
+imports_granularity = "Crate"
+group_imports = "StdExternalCrate"
+imports_layout = "Vertical"
+wrap_comments = true
