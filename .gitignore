@@ -1,5 +1,10 @@
 target/
+debug/
+Cargo.lock
+**/*.rs.bk
 dist/
-*/.env
+*.env
 *.jpg
 *.png
+*~
+*#*#
