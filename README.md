@@ -7,6 +7,9 @@ This is based on the same implementation I did for a Telegram bot, which can be 
 ## TODO
 
 - [ ] Deploy to Github Pages
+- [ ] Add options to generate an image with plain color background (or inverted gradient)
 - [ ] Add some examples to the readme
 - [ ] Definitely make the webpage less ugly
+- [ ] Add more details to the readme
+- [ ] Add explanations on how to run and set up the project
 - [ ] Maybe upload a backend version???
