@@ -39,7 +39,9 @@ jobs:
         env:
           CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
           CLIENT_SECRET: ${{ secrets.SPOTIFY_CLIENT_SECRET }}
-        run: trunk build --public-url ${{ github.event.repository.name }}
+        run: |
+          cd frontend
+          trunk build --public-url ${{ github.event.repository.name }}
 
       - name: Setup Pages
         uses: actions/configure-pages@v2
