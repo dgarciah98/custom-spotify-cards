@@ -4,9 +4,11 @@ A Rust + WASM Yew app that generates a custom card image of your favorite song f
 
 This is based on the same implementation I did for a Telegram bot, which can be found here [https://github.com/dgarciah98/spotify_uri_bot/tree/image-generation](https://github.com/dgarciah98/spotify_uri_bot/tree/image-generation)
 
+You can find it here: https://dgarciah98.github.io/custom-spotify-cards
+
 ## TODO
 
-- [ ] Deploy to Github Pages
+- [x] Deploy to Github Pages
 - [ ] Add options to generate an image with plain color background (or inverted gradient)
 - [ ] Add some examples to the readme
 - [ ] Definitely make the webpage less ugly
