@@ -9,9 +9,9 @@ use yew_router::prelude::*;
 
 #[derive(Clone, Routable, PartialEq)]
 enum Route {
-    #[at("/")]
+    #[at("/custom-spotify-cards")]
     Home,
-    #[at("/:id")]
+    #[at("/custom-spotify-cards/:id")]
     Card { id: String },
 }
 
