@@ -9,10 +9,10 @@ use yew_router::prelude::*;
 
 #[derive(Clone, Routable, PartialEq)]
 enum Route {
-    #[at("/custom-spotify-cards")]
-    Home,
-    #[at("/custom-spotify-cards/:id")]
+    #[at("/:id")]
     Card { id: String },
+    #[at("/")]
+    Home,
 }
 
 #[derive(Properties, PartialEq, Clone)]
@@ -139,18 +139,6 @@ fn card_view(CardViewProps { id }: &CardViewProps) -> Html {
             (),
         );
     }
-    // let card_data = common::model::CardData {
-    //     name: track.as_ref().unwrap().name.to_owned(),
-    //     album: track.as_ref().unwrap().album.name.to_owned(),
-    //     album_type: track.as_ref().unwrap().album.album_type.to_owned(),
-    //     artists: track.as_ref().unwrap().artists().to_owned(),
-    //     genres: genres.to_string(),
-    //     jacket_size: *jacket_size,
-    // };
-    // log::info!("voy a generar la imagen");
-    // let image = common::cards::generate_card(card_data, image_bytes.as_ref().unwrap());
-    // let b64 = general_purpose::STANDARD.encode(&image);
-    // log::info!("la imagen en b64 {:?}",b64);
     html! {
        <img src={(*image).clone()} />
     }
