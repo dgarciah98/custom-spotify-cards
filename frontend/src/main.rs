@@ -160,7 +160,7 @@ fn card_view(CardViewProps { id }: &CardViewProps) -> Html {
 fn app() -> Html {
     html! {
         <main class="container">
-			<BrowserRouter>
+			<HashRouter>
               <div class="row">
                  <div class="col text-center">
                     <h1>{ "Spotify Custom Cards" }</h1>
@@ -174,7 +174,7 @@ fn app() -> Html {
               <div>
                  <Switch<Route> render={switch} />
               </div>
-       </BrowserRouter>
+       </HashRouter>
     </main>
     }
 }
