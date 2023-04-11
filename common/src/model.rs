@@ -36,7 +36,7 @@ pub struct Track {
     pub artists: Vec<Artist>,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct CardData {
     pub name: String,
     pub album: String,
@@ -44,6 +44,7 @@ pub struct CardData {
     pub artists: String,
     pub genres: String,
     pub jacket_size: u16,
+	pub jacket_bytes: Vec<u8>
 }
 
 impl Track {

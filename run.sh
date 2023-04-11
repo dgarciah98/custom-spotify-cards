@@ -6,4 +6,4 @@ IFS=$'\n\t'
 # export CLIENT_SECRET=YOUR_CLIENT_SECRET
 
 (trap 'kill 0' SIGINT; \
- bash -c 'cd frontend; trunk serve')
+ bash -c 'cd frontend; trunk serve --public-url "/custom-spotify-cards/"')

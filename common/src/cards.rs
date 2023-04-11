@@ -37,7 +37,7 @@ fn luminance(color: Rgba<u8>) -> f32 {
     0.2126 * srgb_to_rgb(color[0]) + 0.7152 * srgb_to_rgb(color[1]) + 0.0722 * srgb_to_rgb(color[2])
 }
 
-async fn transparent_text_box(text: &str, font: &Font<'static>, scale: Scale) -> DynamicImage {
+fn transparent_text_box(text: &str, font: &Font<'static>, scale: Scale) -> DynamicImage {
     let v_metrics = font.v_metrics(scale);
     let glyphs: Vec<_> = font.layout(text, scale, point(20.0, 20.0 + v_metrics.ascent)).collect();
     let glyphs_height = (v_metrics.ascent - v_metrics.descent).ceil();
@@ -60,7 +60,7 @@ async fn transparent_text_box(text: &str, font: &Font<'static>, scale: Scale) ->
     text_box
 }
 
-async fn get_kmeans_colors(data: &[u8]) -> Vec<CentroidData<Lab>> {
+fn get_kmeans_colors(data: &[u8]) -> Vec<CentroidData<Lab>> {
     let lab: Vec<Lab> =
         Srgb::from_raw_slice(data).iter().map(|x| x.into_format().into_color()).collect();
 
@@ -73,7 +73,7 @@ async fn get_kmeans_colors(data: &[u8]) -> Vec<CentroidData<Lab>> {
     Lab::sort_indexed_colors(&res.centroids, &res.indices)
 }
 
-async fn find_best_colors(image: image::DynamicImage) -> GradientColors {
+fn find_best_colors(image: image::DynamicImage) -> GradientColors {
     let color_filter = |x: &CentroidData<Lab>, bright_limit, dark_limit| {
         let c: Srgb = x.centroid.into_color();
         let color = c.into_components();
@@ -91,7 +91,7 @@ async fn find_best_colors(image: image::DynamicImage) -> GradientColors {
         ])
     };
 
-    let mut res = get_kmeans_colors(image.as_bytes()).await;
+    let mut res = get_kmeans_colors(image.as_bytes());
 
     let mut dominant_colors =
         res.iter().filter_map(|x| color_filter(x, 2.3, 0.8)).collect::<Vec<Rgb>>();
@@ -114,7 +114,7 @@ async fn find_best_colors(image: image::DynamicImage) -> GradientColors {
     }
 }
 
-pub async fn generate_card(card_data: CardData, image: &[u8]) -> Vec<u8> {
+pub fn generate_card(card_data: CardData, image: &[u8]) -> Vec<u8> {
     let jacket = image::load_from_memory(image).unwrap();
     let jacket_size = (card_data.jacket_size as f32 * 0.75) as u32;
     let resized_jacket = jacket.resize(jacket_size, jacket_size, FilterType::Triangle);
@@ -126,7 +126,7 @@ pub async fn generate_card(card_data: CardData, image: &[u8]) -> Vec<u8> {
     let canvas_height = jacket_size + JACKET_OFFSET * 2;
     let mut canvas = DynamicImage::new_rgba8(canvas_width, canvas_height);
 	
-    let GradientColors { plain, gradient } = find_best_colors(jacket).await;
+    let GradientColors { plain, gradient } = find_best_colors(jacket);
     let (start, end) = gradient.unwrap();
 	let mut blend = start.clone();
 	blend.blend(&Rgba([end[0], end[1], end[2], 127]));
@@ -190,7 +190,7 @@ pub async fn generate_card(card_data: CardData, image: &[u8]) -> Vec<u8> {
         }
 
         if color_by_idx(i) == TRANSPARENT {
-            let text = transparent_text_box(texts[i], select_font(texts[i]), scales[i]).await;
+            let text = transparent_text_box(texts[i], select_font(texts[i]), scales[i]);
             overlay(&mut canvas, &text, text_offset_x as i64 - 2, y_offset_by_idx(i, &text));
             continue;
         }

@@ -1,7 +1,9 @@
 mod api;
+mod utils;
 
 use base64::{engine::general_purpose, Engine};
-use wasm_bindgen::{JsCast, JsValue};
+use gloo::history::{HashHistory, History};
+use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::spawn_local;
 use web_sys::HtmlInputElement;
 use yew::prelude::*;
@@ -25,7 +27,7 @@ struct Input {
     class: String,
 }
 
-#[rustfmt::skip(html)]
+//#[rustfmt::skip(html)]
 fn switch(routes: Route) -> Html {
     match routes {
         Route::Home => html! {},
@@ -33,59 +35,35 @@ fn switch(routes: Route) -> Html {
     }
 }
 
-fn parse_uri(uri: String) -> Result<String, JsValue> {
-    let get_id = |url: web_sys::Url| {
-        url.pathname().split(|c| c == '/' || c == ':').last().unwrap().to_string()
-    };
-    let regex = regex::Regex::new(r"(^[a-zA-Z0-9]{22}$)").unwrap();
-    if regex.is_match(&uri) {
-        return Ok(uri);
-    }
-
-    let url = web_sys::Url::new(&uri);
-    let url_res = match url {
-        Ok(url) => Ok(get_id(url)),
-        Err(err) => Err(err),
-    };
-    match url_res {
-        Ok(id) => {
-            if regex.is_match(&id) {
-                Ok(id)
-            } else {
-                Err(JsValue::from_str("Invalid ID"))
-            }
-        }
-        Err(err) => Err(err),
-    }
-}
-
 #[function_component(TextInput)]
-#[rustfmt::skip(html)]
+//#[rustfmt::skip(html)]
 fn text_input() -> Html {
     let navigator = use_navigator().unwrap();
-    let style = "display: flex; justify-content: center; align-items: center;";
+    let style = "display: flex; justify-content: center; align-items: center; font-size: 1.2vw;";
     let class = use_state(|| "form-control".to_owned());
 
-    let onchange = {
+    let onkeypress = {
         let class = class.clone();
 
-        Callback::from(move |e: Event| {
-            let value = e.target().unwrap().unchecked_into::<HtmlInputElement>().value();
+        Callback::from(move |e: KeyboardEvent| {
+			if e.key() == "Enter" {
+				let value = e.target().unwrap().unchecked_into::<HtmlInputElement>().value();
 
-            let res = match parse_uri(value.clone()) {
-                Ok(ok) => {
-                    class.set("form-control".to_string());
-                    ok
-                }
-                Err(err) => {
-                    class.set("form-control is-invalid".to_string());
-                    panic!("{:?}", err);
-                }
-            };
-            if !res.is_empty() {
-                //id.set(Some(res));
-                navigator.push(&Route::Card { id: res })
-            }
+				let res = match utils::parse_uri(value.clone()) {
+					Ok(ok) => {
+						class.set("form-control".to_string());
+						ok
+					}
+					Err(err) => {
+						class.set("form-control is-invalid".to_string());
+						panic!("{:?}", err);
+					}
+				};
+				if !res.is_empty() {
+					log::info!("got id {:?}", res);
+					HashHistory::new().push(format!("/{res}"));
+				}
+			}
         })
     };
 
@@ -95,7 +73,7 @@ fn text_input() -> Html {
               <div class="col-8">
                  <label for="validationInput" class="form-label">{"Put your favorite song!"}</label>
                  <div class="input-group">
-                    <input type="text" class={&*class} id="inputForm" onchange={onchange} placeholder="URI" required=true />
+                    <input type="text" class={&*class} id="inputForm" onkeypress={onkeypress} placeholder="URI" required=true style="font-size: 1.2vw" />
                  </div>
               </div>
            </form>
@@ -104,54 +82,43 @@ fn text_input() -> Html {
 }
 
 #[function_component(CardView)]
-fn card_view(CardViewProps { id }: &CardViewProps) -> Html {
-    let image = use_state(|| "".to_owned());
+fn card_view(props: &CardViewProps) -> Html {
+	let style = "margin-left: auto;margin-right: auto;margin-top: 2%;margin-bottom: 2%;width: 70vw;";
+    let image = use_state_eq(|| "".to_owned());
+	let track_id = props.id.to_owned();
     {
         let image = image.clone();
-        let id = id.clone();
-        use_effect_with_deps(
+		let id = track_id.clone();
+        use_effect_with(
+            track_id,
             move |_| {
                 spawn_local(async move {
-                    let token = api::authorize().await;
-                    let track = api::get_song(id, token.clone()).await;
-					let common::model::Track { name, album, .. } = track.clone();
-                    let artist_id = track.artists.first().unwrap().id.to_owned();
-                    let artist = api::get_artist(artist_id, token).await;
-					let image_data = album.images.first().unwrap();
-                    let image_bytes = api::get(image_data.url.to_owned()).await.binary().await.unwrap();
-                    let card_data = common::model::CardData {
-                        name,
-                        album: album.name,
-                        album_type: album.album_type,
-                        artists: track.artists(),
-                        genres: artist.genres().unwrap(),
-                        jacket_size: image_data.width,
-                    };
+					let card_data = utils::fetch_data(id.clone()).await;
 					let t0 = web_sys::window().unwrap().performance().unwrap().now();
-                    let generated_image = common::cards::generate_card(card_data, &image_bytes).await;
+                    let generated_image = common::cards::generate_card(card_data.clone(), &card_data.jacket_bytes);
 					let t1 = web_sys::window().unwrap().performance().unwrap().now();
 					log::info!("time {:?}",t1-t0);
                     let b64 = general_purpose::STANDARD.encode(&generated_image);
-                    image.set(format!("data:image/png;base64,{}", b64));
+                    image.set(format!("data:image/png;base64,{}", b64));					
                 });
-                || ()
-            },
-            (),
+				|| ()
+            }
         );
-    }
+    };
     html! {
-       <img src={(*image).clone()} />
+	   <img src={(*image).clone()} style={style} />
     }
 }
 
 #[function_component(App)]
 fn app() -> Html {
+	let style = "display: flex; justify-content: center; align-items: center; font-size: 3vw;";
     html! {
         <main class="container">
 			<HashRouter>
               <div class="row">
                  <div class="col text-center">
-                    <h1>{ "Spotify Custom Cards" }</h1>
+                    <h1 style={style}>{ "Spotify Custom Cards" }</h1>
                  </div>
               </div>
               <section class="row">
@@ -159,7 +126,7 @@ fn app() -> Html {
                     <TextInput />
                  </div>
               </section>
-              <div>
+              <div class="col" style="display: flex;">
                  <Switch<Route> render={switch} />
               </div>
        </HashRouter>
