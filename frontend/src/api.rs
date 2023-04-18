@@ -31,14 +31,14 @@ pub(crate) async fn get(url: String) -> Response {
 }
 
 pub(crate) async fn authorize() -> AccessToken {
-    let client_id = std::env!("CLIENT_ID");
-    // 	.expect(
-    //     "No token found. Please provide your client ID from Spotify Developer API Portal",
-    // );
-    let secret = std::env!("CLIENT_SECRET");
-    // 	.expect(
-    //     "No token found. Please provide your client secret from Spotify Developer API Portal",
-    // );
+    let client_id = std::option_env!("CLIENT_ID")
+    	.expect(
+			"No token found. Please provide your client ID from Spotify Developer API Portal",
+		);
+    let secret = std::option_env!("CLIENT_SECRET")
+    	.expect(
+			"No token found. Please provide your client secret from Spotify Developer API Portal",
+		);
     let b64 = general_purpose::STANDARD.encode(format!("{}:{}", client_id, secret));
     let basic = "Basic ".to_owned() + &b64;
     Request::post("https://accounts.spotify.com/api/token")

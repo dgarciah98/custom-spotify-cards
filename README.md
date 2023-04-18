@@ -6,6 +6,15 @@ This is based on the same implementation I did for a Telegram bot, which can be 
 
 You can find it here: https://dgarciah98.github.io/custom-spotify-cards
 
+## How to use it
+You're going to need a Spotify URI for the track you want. How do you get one?
+
+- **Copy Song Link**: just copy the link from your app like you normally would or from your browser
+- **Copy Spotify URI**: on desktop, press ALT while going to the Copy Song Link button
+- **Use Track ID**: taking only the ID itself for the track also works!
+
+Keep in mind that it has to be a ***track***, that is the resulting URI has to be something like `open.spotify.com/track/<track_id>` or `spotify:track:<track_id>`
+
 ## TODO
 
 - [x] Deploy to Github Pages
