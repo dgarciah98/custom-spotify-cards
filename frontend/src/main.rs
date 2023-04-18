@@ -36,7 +36,7 @@ fn app() -> Html {
 			<HashRouter>
               <div class="row">
                  <div class="col text-center">
-                    <h1 style={format!("{} {}", style, font_size)}>{ "Spotify Custom Cards" }</h1>
+                    <h1 style={format!("{} {}", style, font_size)}>{ "Custom Spotify Cards" }</h1>
                  </div>
               </div>
               <section class="row">
