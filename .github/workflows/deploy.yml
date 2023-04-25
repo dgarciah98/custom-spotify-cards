@@ -41,7 +41,7 @@ jobs:
           CLIENT_SECRET: ${{ secrets.SPOTIFY_CLIENT_SECRET }}
         run: |
           cd frontend
-          trunk build --public-url "/${{ github.event.repository.name }}/"
+          trunk build --release --public-url "/${{ github.event.repository.name }}/"
 
       - name: Setup Pages
         uses: actions/configure-pages@v3
