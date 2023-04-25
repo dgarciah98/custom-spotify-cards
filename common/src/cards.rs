@@ -65,7 +65,7 @@ fn get_kmeans_colors(data: &[u8]) -> Vec<CentroidData<Lab>> {
         Srgb::from_raw_slice(data).iter().map(|x| x.into_format().into_color()).collect();
 
     let mut res = kmeans_colors::Kmeans::new();
-    for i in 0..2 {
+    for i in 0..5 {
         let run_res = kmeans_colors::get_kmeans_hamerly(8, 20, 5.0, false, &lab, 0 + i as u64);
         (run_res.score < res.score).then(|| res = run_res);
     }
@@ -73,7 +73,7 @@ fn get_kmeans_colors(data: &[u8]) -> Vec<CentroidData<Lab>> {
     Lab::sort_indexed_colors(&res.centroids, &res.indices)
 }
 
-fn find_best_colors(image: image::DynamicImage) -> GradientColors {
+fn find_best_colors(image: &[u8]) -> GradientColors {
     let color_filter = |x: &CentroidData<Lab>, bright_limit, dark_limit| {
         let c: Srgb = x.centroid.into_color();
         let color = c.into_components();
@@ -91,7 +91,7 @@ fn find_best_colors(image: image::DynamicImage) -> GradientColors {
         ])
     };
 
-    let mut res = get_kmeans_colors(image.as_bytes());
+    let mut res = get_kmeans_colors(image);
 
     let mut dominant_colors =
         res.iter().filter_map(|x| color_filter(x, 2.3, 0.8)).collect::<Vec<Rgb>>();
@@ -126,7 +126,7 @@ pub fn generate_card(card_data: CardData, image: &[u8]) -> Vec<u8> {
     let canvas_height = jacket_size + JACKET_OFFSET * 2;
     let mut canvas = DynamicImage::new_rgba8(canvas_width, canvas_height);
 	
-    let GradientColors { plain, gradient } = find_best_colors(jacket);
+    let GradientColors { plain, gradient } = find_best_colors(jacket.as_bytes());
     let (start, end) = gradient.unwrap();
 	let mut blend = start.clone();
 	blend.blend(&Rgba([end[0], end[1], end[2], 127]));

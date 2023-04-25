@@ -1,2 +1,6 @@
 [workspace]
 members = ["frontend", "common"]
+
+[profile.release]
+lto = true
+opt-level = "z"
