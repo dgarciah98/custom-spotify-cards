@@ -1,8 +1,6 @@
 use common::model::{CardData, AccessToken};
-use gloo::utils::errors::JsError;
 use gloo_net::Error;
-use wasm_bindgen::{JsValue, JsCast};
-use web_sys::HtmlDocument;
+use wasm_bindgen::JsValue;
 use yew::UseStateHandle;
 
 use crate::api;

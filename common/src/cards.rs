@@ -2,7 +2,7 @@ use std::io::Cursor;
 
 use crate::model::CardData;
 use image::{
-    imageops::{overlay, vertical_gradient, FilterType, colorops},
+    imageops::{overlay, vertical_gradient, FilterType},
     DynamicImage, Pixel, Rgba,
 };
 use imageproc::drawing::{draw_text_mut, text_size};

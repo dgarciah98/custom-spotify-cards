@@ -1,4 +1,3 @@
-use web_sys::MouseEvent;
 use yew::{function_component, Properties, Callback, Html, html};
 
 #[derive(Properties, PartialEq)]

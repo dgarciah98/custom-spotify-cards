@@ -2,11 +2,9 @@ use gloo::history::{HashHistory, History};
 use wasm_bindgen::JsCast;
 use web_sys::HtmlInputElement;
 use yew::prelude::*;
-use yew_router::prelude::*;
 
 #[function_component(TextInput)]
 pub(crate) fn text_input() -> Html {
-    let navigator = use_navigator().unwrap();
     let style = "display: flex; justify-content: center; align-items: center; font-size: 1.2vw;";
     let class = use_state(|| "form-control".to_owned());
 
