@@ -38,24 +38,19 @@ pub struct Track {
 
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
 pub struct CardData {
-	pub track_id: String,
+    pub track_id: String,
     pub name: String,
     pub album: String,
     pub album_type: String,
     pub artists: String,
     pub genres: String,
     pub jacket_size: u16,
-	pub jacket_bytes: Vec<u8>
+    pub jacket_bytes: Vec<u8>,
 }
 
 impl Track {
     pub fn artists(&self) -> String {
-        self.artists
-            .clone()
-            .into_iter()
-            .map(|a| a.name)
-            .collect::<Vec<String>>()
-            .join(", ")
+        self.artists.clone().into_iter().map(|a| a.name).collect::<Vec<String>>().join(", ")
     }
 }
 

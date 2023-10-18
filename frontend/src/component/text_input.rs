@@ -12,23 +12,23 @@ pub(crate) fn text_input() -> Html {
         let class = class.clone();
 
         Callback::from(move |e: KeyboardEvent| {
-			if e.key() == "Enter" {
-				let value = e.target().unwrap().unchecked_into::<HtmlInputElement>().value();
+            if e.key() == "Enter" {
+                let value = e.target().unwrap().unchecked_into::<HtmlInputElement>().value();
 
-				let res = match crate::utils::parse_uri(value.clone()) {
-					Ok(ok) => {
-						class.set("form-control".to_string());
-						ok
-					}
-					Err(err) => {
-						class.set("form-control is-invalid".to_string());
-						panic!("{:?}", err);
-					}
-				};
-				if !res.is_empty() {
-					HashHistory::new().push(format!("/{res}"));
-				}
-			}
+                let res = match crate::utils::parse_uri(value.clone()) {
+                    Ok(ok) => {
+                        class.set("form-control".to_string());
+                        ok
+                    }
+                    Err(err) => {
+                        class.set("form-control is-invalid".to_string());
+                        panic!("{:?}", err);
+                    }
+                };
+                if !res.is_empty() {
+                    HashHistory::new().push(format!("/{res}"));
+                }
+            }
         })
     };
 

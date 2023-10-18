@@ -1,10 +1,10 @@
 mod api;
-mod utils;
 mod component;
+mod utils;
 
 use component::card_view::CardView;
-use component::text_input::TextInput;
 use component::home::Home;
+use component::text_input::TextInput;
 use yew::prelude::*;
 use yew_router::prelude::*;
 
@@ -25,11 +25,11 @@ fn switch(routes: Route) -> Html {
 
 #[function_component(App)]
 fn app() -> Html {
-	let font_size = "font-size: 3vw;";
-	let style = "display: flex; justify-content: center; align-items: center;";
+    let font_size = "font-size: 3vw;";
+    let style = "display: flex; justify-content: center; align-items: center;";
     html! {
         <main class="container">
-			<HashRouter>
+            <HashRouter>
               <div class="row">
                  <div class="col text-center">
                     <h1 style={format!("{} {}", style, font_size)}>{ "Custom Spotify Cards" }</h1>
