@@ -14,7 +14,7 @@ log = "0.4.17"
 wasm-bindgen = "0.2.84"
 wasm-bindgen-futures = "0.4.33"
 wasm-logger = "0.2.0"
-web-sys = { version = "0.3.61", features = ["HtmlInputElement", "Window", "Performance"] }
+web-sys = { version = "0.3.61", features = ["HtmlInputElement", "Window", "Performance", "HtmlDocument"] }
 yew = { git = "https://github.com/yewstack/yew/", features = ["csr"] }
 yew-router = { git = "https://github.com/yewstack/yew/" }
 common = { path = "../common" }
