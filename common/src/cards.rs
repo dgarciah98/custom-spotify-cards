@@ -2,7 +2,7 @@ use std::io::Cursor;
 
 use crate::model::CardData;
 use image::{
-    imageops::{overlay, vertical_gradient, FilterType},
+    imageops::{overlay, vertical_gradient, FilterType, colorops},
     DynamicImage, Pixel, Rgba,
 };
 use imageproc::drawing::{draw_text_mut, text_size};
@@ -23,12 +23,89 @@ const JAPANESE_FONT: &[u8] = include_bytes!("../../common/assets/MPLUS2-Bold.ttf
 const REGEX_JA: &str =
     r"[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\uff66-\uff9f\u3131-\uD79D]";
 
-struct GradientColors {
-    plain: Rgba<u8>,
-    gradient: Option<(Rgba<u8>, Rgba<u8>)>,
+pub enum BackgroundType {
+	Plain,
+	Gradient,
+	InvertedGradient,
+	Custom
 }
 
-fn luminance(color: Rgba<u8>) -> f32 {
+#[derive(Debug, Clone, PartialEq)]
+pub struct GradientColors {
+    pub plain: Rgba<u8>,
+    pub gradient: Option<(Rgba<u8>, Rgba<u8>)>,
+}
+
+impl GradientColors {
+    pub fn gradient_blend(&self) -> Rgba<u8> {
+        let (start, end) = self.gradient.unwrap();
+        let mut blend = start.clone();
+        blend.blend(&Rgba([end[0], end[1], end[2], 127]));
+        blend
+    }
+
+    pub fn gradient_custom_blend(&self, blend_factor: u8) -> Rgba<u8> {
+        let (start, end) = self.gradient.unwrap();
+        let mut blend = start.clone();
+        blend.blend(&Rgba([end[0], end[1], end[2], blend_factor]));
+        blend
+    }
+
+    pub fn gradient_start(&self) -> Rgba<u8> {
+        self.gradient.unwrap().0
+    }
+
+    pub fn gradient_end(&self) -> Rgba<u8> {
+        self.gradient.unwrap().1
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct CanvasAssets {
+    pub jacket_size: u32,
+    pub jacket: DynamicImage,
+    pub colors: GradientColors,
+}
+
+impl CanvasAssets {
+    pub fn set_jacket_size(&mut self, jacket_size: u32) {
+    self.jacket_size = jacket_size;
+    }
+
+    pub fn text_offset_x(&self) -> u32 {
+    self.jacket_size + JACKET_OFFSET * 2 - 5
+    }
+    
+    pub fn text_area_width(&self) -> u32 {
+	(self.jacket_size as f32 * 0.84).round() as u32
+    }
+    
+    pub fn canvas_height(&self) -> u32 {
+	self.jacket_size + JACKET_OFFSET * 2
+    }
+
+    pub fn canvas_width(&self) -> u32 {
+	self.jacket_size + self.text_area_width() + JACKET_OFFSET * 3
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct TextAssets {
+    pub name: String,
+    pub name_transparent: DynamicImage,
+    pub album: String,
+    pub album_transparent: DynamicImage,
+    pub artists: String,
+    pub artists_transparent: DynamicImage,
+    pub genres: String,
+    pub genres_transparent: DynamicImage,
+    pub scales: Vec<Scale>,
+    pub font: Font<'static>,
+    pub jp_font: Font<'static>,
+    pub regex: regex::Regex
+}
+
+fn luminance(color: &Rgba<u8>) -> f32 {
     let srgb_to_rgb = |val| {
         let val = val as f32 / 255.0;
         (val <= 0.04045).then_some(val / 12.92).unwrap_or(((val + 0.055) / 1.055).powf(2.4))
@@ -114,61 +191,116 @@ fn find_best_colors(image: &[u8]) -> GradientColors {
     }
 }
 
-pub fn generate_card(card_data: CardData, image: &[u8]) -> Vec<u8> {
-    let jacket = image::load_from_memory(image).unwrap();
-    let jacket_size = (card_data.jacket_size as f32 * 0.75) as u32;
-    let resized_jacket = jacket.resize(jacket_size, jacket_size, FilterType::Triangle);
-
-    let text_offset_x = jacket_size + JACKET_OFFSET * 2 - 5;
-    let text_area_width = (jacket_size as f32 * 0.84).round() as u32;
-
-    let canvas_width = jacket_size + text_area_width + JACKET_OFFSET * 3;
-    let canvas_height = jacket_size + JACKET_OFFSET * 2;
-    let mut canvas = DynamicImage::new_rgba8(canvas_width, canvas_height);
-	
-    let GradientColors { plain, gradient } = find_best_colors(jacket.as_bytes());
-    let (start, end) = gradient.unwrap();
-	let mut blend = start.clone();
-	blend.blend(&Rgba([end[0], end[1], end[2], 127]));
-	
+pub fn generate_text_assets(card_data: CardData, canvas_assets: CanvasAssets) -> TextAssets {
     let font = Font::try_from_bytes(DEFAULT_FONT).expect("Font not found");
-    let ja_font = Font::try_from_bytes(JAPANESE_FONT).expect("Font not found");
+    let jp_font = Font::try_from_bytes(JAPANESE_FONT).expect("Font not found");
     let regex = regex::Regex::new(REGEX_JA).unwrap();
 
-    let select_font = |s: &str| regex.is_match(s).then_some(&ja_font).unwrap_or(&font);
+    let select_font = |s: &str| regex.is_match(s).then_some(&jp_font).unwrap_or(&font);
 
     let adjust_text = |s: &str, scale: Scale| {
         let (text_width, ..) = text_size(scale, select_font(s), s);
-        (text_width > text_area_width as i32)
-            .then_some(Scale::uniform(scale.x * (text_area_width as f32 / text_width as f32)))
+        (text_width > canvas_assets.text_area_width() as i32)
+            .then_some(Scale::uniform(scale.x * (canvas_assets.text_area_width() as f32 / text_width as f32)))
             .unwrap_or(scale)
     };
 
-    let text_color = |s: &str, is_genres: bool| {
-        let avg_luminance = is_genres.then_some(luminance(end)).unwrap_or(luminance(blend));
-        (avg_luminance > 0.179)
-            .then_some((s.len() == 1).then_some(BLACK).unwrap_or(TRANSPARENT))
-            .unwrap_or(WHITE)
-    };
+    let texts = vec![&card_data.name, &card_data.album, &card_data.artists, &card_data.genres];
 
     let mut scales: Vec<Scale> = Vec::new();
-    let texts = vec![&card_data.name, &card_data.album, &card_data.artists, &card_data.genres];
 
     for i in 0..4 {
         scales.push(adjust_text(
             texts[i],
             (i == 3).then_some(Scale::uniform(GENRES_SCALE)).unwrap_or(Scale::uniform(TEXT_SCALE)),
         ));
+    }    
+
+    TextAssets { 
+        name: card_data.name.to_string(), 
+        name_transparent: transparent_text_box(texts[0], select_font(texts[0]), scales[0]), 
+        album: card_data.album.to_string(), 
+        album_transparent: transparent_text_box(texts[1], select_font(texts[1]), scales[1]), 
+        artists: card_data.artists.to_string(), 
+        artists_transparent: transparent_text_box(texts[2], select_font(texts[2]), scales[2]), 
+        genres: card_data.genres.to_string(), 
+        genres_transparent: transparent_text_box(texts[3], select_font(texts[3]), scales[3]),
+        scales,
+        font,
+        jp_font,
+        regex
     }
+
+
+}
+
+pub fn generate_canvas_assets(card_data: CardData) -> CanvasAssets {
+    let jacket = image::load_from_memory(&card_data.jacket_bytes).unwrap();
+    let jacket_size = (card_data.jacket_size as f32 * 0.75) as u32;
+    let resized_jacket = jacket.resize(jacket_size, jacket_size, FilterType::Triangle);
+
+    let colors = find_best_colors(jacket.as_bytes());
+
+    CanvasAssets { 
+        jacket_size, 
+        jacket: resized_jacket, 
+        colors
+    }
+}
+
+pub fn generate_card(card_data: CardData, canvas_assets: CanvasAssets, text_assets: TextAssets, bg_type: String) -> Vec<u8> {
+    
+    
+    //let canvas_width = jacket_size + text_area_width + JACKET_OFFSET * 3;
+    //let canvas_height = jacket_size + JACKET_OFFSET * 2;
+    let mut canvas = DynamicImage::new_rgba8(canvas_assets.canvas_width(), canvas_assets.canvas_height());
+    
+    //vertical_gradient(&mut canvas, &canvas_assets.colors.gradient_start(), &canvas_assets.colors.gradient_end());
+	match bg_type.as_str() {
+		"simple" => vertical_gradient(&mut canvas, &canvas_assets.colors.plain, &canvas_assets.colors.plain),
+		"gradient" => vertical_gradient(&mut canvas, &canvas_assets.colors.gradient_start(), &canvas_assets.colors.gradient_end()),
+		"reverted" => vertical_gradient(&mut canvas, &canvas_assets.colors.gradient_end(), &canvas_assets.colors.gradient_start()),
+		_ => vertical_gradient(&mut canvas, &canvas_assets.colors.gradient_start(), &canvas_assets.colors.gradient_end())
+	};
+
+    overlay(&mut canvas, &canvas_assets.jacket, JACKET_OFFSET as i64, JACKET_OFFSET as i64);
+
 
     let name_y_pos = TEXT_OFFSET_Y as i32;
     let album_y_pos = (TEXT_OFFSET_Y * 2 + TEXT_SPACING) as i32;
     let artists_y_pos = (TEXT_OFFSET_Y * 3 + TEXT_SPACING * 2) as i32;
-    let genres_y_pos = (canvas_height - JACKET_OFFSET - 15) as i32;
+    let genres_y_pos = (canvas_assets.canvas_height() - JACKET_OFFSET - 15) as i32;
     let y_pos = vec![name_y_pos, album_y_pos, artists_y_pos, genres_y_pos];
 
-    vertical_gradient(&mut canvas, &start, &end);
-    overlay(&mut canvas, &resized_jacket, JACKET_OFFSET as i64, JACKET_OFFSET as i64);
+    let text_color = |s: &str, is_genres: bool| {
+        let avg_luminance = is_genres
+			.then_some(
+				match bg_type.as_str() {
+					"simple" => luminance(&canvas_assets.colors.plain),
+					_ => luminance(&canvas_assets.colors.gradient_end())
+				}
+				
+			)
+			.unwrap_or(
+				match bg_type.as_str() {
+					"simple" => luminance(&canvas_assets.colors.plain),
+					_ => luminance(&canvas_assets.colors.gradient_blend())
+				}
+			);
+        (avg_luminance > 0.179)
+            .then_some((s.len() == 1).then_some(BLACK).unwrap_or(TRANSPARENT))
+            .unwrap_or(WHITE)
+    };
+
+    let texts = vec![&card_data.name, &card_data.album, &card_data.artists, &card_data.genres];
+    let transparent_texts = vec![
+		&text_assets.name_transparent,
+		&text_assets.album_transparent,
+		&text_assets.artists_transparent,
+		&text_assets.genres_transparent
+	];
+
+    let select_font = |s: &str| text_assets.regex.is_match(s).then_some(&text_assets.jp_font).unwrap_or(&text_assets.font);
 
     let color_by_idx = |i: usize| text_color(texts[i], if i == 3 { true } else { false });
     let text_box_offset = |i: usize, text: &DynamicImage| {
@@ -190,17 +322,16 @@ pub fn generate_card(card_data: CardData, image: &[u8]) -> Vec<u8> {
         }
 
         if color_by_idx(i) == TRANSPARENT {
-            let text = transparent_text_box(texts[i], select_font(texts[i]), scales[i]);
-            overlay(&mut canvas, &text, text_offset_x as i64 - 2, y_offset_by_idx(i, &text));
+            overlay(&mut canvas, transparent_texts[i], canvas_assets.text_offset_x() as i64 - 2, y_offset_by_idx(i, transparent_texts[i]));
             continue;
         }
 
         draw_text_mut(
             &mut canvas,
             color_by_idx(i),
-            text_offset_x as i32,
+            canvas_assets.text_offset_x() as i32,
             y_pos[i],
-            scales[i],
+            text_assets.scales[i],
             select_font(texts[i]),
             texts[i],
         );

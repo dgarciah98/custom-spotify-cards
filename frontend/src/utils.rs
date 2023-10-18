@@ -1,5 +1,9 @@
-use common::model::CardData;
-use wasm_bindgen::JsValue;
+use common::model::{CardData, AccessToken};
+use gloo::utils::errors::JsError;
+use gloo_net::Error;
+use wasm_bindgen::{JsValue, JsCast};
+use web_sys::HtmlDocument;
+use yew::UseStateHandle;
 
 use crate::api;
 
@@ -29,15 +33,32 @@ pub(crate) fn parse_uri(uri: String) -> Result<String, JsValue> {
     }
 }
 
-pub(crate) async fn fetch_data(id: String) -> CardData {
-    let token = api::authorize().await;
-    let track = api::get_song(id, token.clone()).await;
-	let common::model::Track { name, album, .. } = track.clone();
+pub(crate) async fn fetch_data(id: String, token: UseStateHandle<Option<AccessToken>>) -> Result<CardData, Error> {
+    let mut mut_token: AccessToken;
+	if (*token).is_none() { mut_token = api::authorize().await?; }
+	else { mut_token = (*token).clone().unwrap(); }
+	
+    let track: common::model::Track = match api::get_song(id.clone(), mut_token.clone()).await {
+		Ok(res) => { res }
+		Err(err) => {
+			match err.to_string().as_str() {
+				"The access token expired" => {
+					let new_token = api::authorize().await?;
+					mut_token = new_token.clone();
+					api::get_song(id.clone(), new_token).await?				
+				}
+				_ => { panic!() }				
+			}
+		}
+	};
+	let common::model::Track { id, name, album, .. } = track.clone();
     let artist_id = track.artists.first().unwrap().id.to_owned();
-    let artist = api::get_artist(artist_id, token).await;
+    let artist = api::get_artist(artist_id, mut_token.clone()).await?;
 	let image_data = album.images.first().unwrap();
-    let image_bytes = api::get(image_data.url.to_owned()).await.binary().await.unwrap();
-    common::model::CardData {
+    let image_bytes = api::get(image_data.url.to_owned()).await?.binary().await?;
+	token.set(Some(mut_token));
+    Ok(common::model::CardData {
+		track_id: id,
         name,
         album: album.name,
         album_type: album.album_type,
@@ -45,5 +66,5 @@ pub(crate) async fn fetch_data(id: String) -> CardData {
         genres: artist.genres().unwrap(),
         jacket_size: image_data.width,
 		jacket_bytes: image_bytes
-    }
+    })
 }

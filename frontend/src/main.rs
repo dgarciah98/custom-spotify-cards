@@ -2,15 +2,11 @@ mod api;
 mod utils;
 mod component;
 
-use std::fmt::format;
-
 use component::card_view::CardView;
 use component::text_input::TextInput;
 use component::home::Home;
 use yew::prelude::*;
 use yew_router::prelude::*;
-
-
 
 #[derive(Clone, Routable, PartialEq)]
 enum Route {

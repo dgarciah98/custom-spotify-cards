@@ -36,8 +36,9 @@ pub struct Track {
     pub artists: Vec<Artist>,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
 pub struct CardData {
+	pub track_id: String,
     pub name: String,
     pub album: String,
     pub album_type: String,
