@@ -27,9 +27,9 @@ pub(crate) fn card_view(props: &CardViewProps) -> Html {
     let token: UseStateHandle<Option<AccessToken>> = use_state(|| None);
 
     let bg_types = vec![
-        String::from("simple"),
+        String::from("plain"),
         String::from("gradient"),
-        String::from("reverted"),
+        String::from("inverted"),
         String::from("custom"),
     ];
 

@@ -239,7 +239,7 @@ pub fn generate_card(
         DynamicImage::new_rgba8(canvas_assets.canvas_width(), canvas_assets.canvas_height());
 
     match bg_type.as_str() {
-        "simple" => {
+        "plain" => {
             vertical_gradient(&mut canvas, &canvas_assets.colors.plain, &canvas_assets.colors.plain)
         }
         "gradient" => vertical_gradient(
@@ -247,7 +247,7 @@ pub fn generate_card(
             &canvas_assets.colors.gradient_start(),
             &canvas_assets.colors.gradient_end(),
         ),
-        "reverted" => vertical_gradient(
+        "inverted" => vertical_gradient(
             &mut canvas,
             &canvas_assets.colors.gradient_end(),
             &canvas_assets.colors.gradient_start(),
@@ -270,11 +270,11 @@ pub fn generate_card(
     let text_color = |s: &str, is_genres: bool| {
         let avg_luminance = is_genres
             .then_some(match bg_type.as_str() {
-                "simple" => luminance(&canvas_assets.colors.plain),
+                "plain" => luminance(&canvas_assets.colors.plain),
                 _ => luminance(&canvas_assets.colors.gradient_end()),
             })
             .unwrap_or(match bg_type.as_str() {
-                "simple" => luminance(&canvas_assets.colors.plain),
+                "plain" => luminance(&canvas_assets.colors.plain),
                 _ => luminance(&canvas_assets.colors.gradient_blend()),
             });
         (avg_luminance > 0.179)
