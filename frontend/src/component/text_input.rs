@@ -2,9 +2,19 @@ use gloo::history::{HashHistory, History};
 use wasm_bindgen::JsCast;
 use web_sys::HtmlInputElement;
 use yew::prelude::*;
+<<<<<<< Updated upstream
 
 #[function_component(TextInput)]
 pub(crate) fn text_input() -> Html {
+=======
+use yew_router::{navigator, prelude::use_navigator};
+
+use crate::Route;
+
+#[function_component(TextInput)]
+pub(crate) fn text_input() -> Html {
+	let navigator = use_navigator().unwrap();
+>>>>>>> Stashed changes
     let style = "display: flex; justify-content: center; align-items: center; font-size: 1.2vw;";
     let class = use_state(|| "form-control".to_owned());
 
@@ -26,7 +36,12 @@ pub(crate) fn text_input() -> Html {
                     }
                 };
                 if !res.is_empty() {
+<<<<<<< Updated upstream
                     HashHistory::new().push(format!("/{res}"));
+=======
+					navigator.push(&Route::Card { id: res });
+                    //HashHistory::new().push(format!("/{res}"));
+>>>>>>> Stashed changes
                 }
             }
         })
