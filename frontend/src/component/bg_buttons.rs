@@ -6,8 +6,8 @@ pub(crate) struct BackgroundButtonsProps {
     pub(crate) onclick: Callback<String>,
 }
 
-#[function_component(BackgroundButtons)]
-pub(crate) fn background_buttons(
+#[function_component]
+pub(crate) fn BackgroundButtons(
     BackgroundButtonsProps { types, onclick }: &BackgroundButtonsProps,
 ) -> Html {
     let capitalize = |s: &str| -> String {

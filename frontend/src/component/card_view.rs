@@ -13,8 +13,8 @@ pub struct CardViewProps {
     pub id: String,
 }
 
-#[function_component(CardView)]
-pub(crate) fn card_view(props: &CardViewProps) -> Html {
+#[function_component]
+pub(crate) fn CardView(props: &CardViewProps) -> Html {
     let style =
         "margin-left: auto;margin-right: auto;margin-top: 2%;margin-bottom: 2%;width: 70vw;";
     let image = use_state_eq(|| "".to_owned());
@@ -53,11 +53,8 @@ pub(crate) fn card_view(props: &CardViewProps) -> Html {
                 if new_card_data.clone().is_none()
                     || new_card_data.clone().unwrap().track_id != track_id
                 {
-                    log::info!("fetch_data");
                     new_card_data = crate::utils::fetch_data(track_id.clone(), token).await.ok();
-                    log::info!("data fetched");
                 }
-                let t0 = web_sys::window().unwrap().performance().unwrap().now();
                 let mut new_canvas_assets = (*canvas_assets).clone();
                 let mut new_text_assets = (*text_assets).clone();
                 if new_card_data.clone() != (*card_data).clone() || (*card_data).clone().is_none() {
@@ -95,8 +92,6 @@ pub(crate) fn card_view(props: &CardViewProps) -> Html {
                     let b64 = general_purpose::STANDARD.encode(&generated_image);
                     image.set(format!("data:image/png;base64,{}", b64));
                 }
-                let t1 = web_sys::window().unwrap().performance().unwrap().now();
-                log::info!("time {:?}", t1 - t0);
             });
             || ()
         });

@@ -7,7 +7,7 @@ use image::{
 };
 use imageproc::drawing::{draw_text_mut, text_size};
 use kmeans_colors::{CentroidData, Sort};
-use palette::{rgb::Rgb, IntoColor, Lab, Pixel as PalettePixel, Srgb};
+use palette::{rgb::Rgb, IntoColor, Lab, Srgb};
 use rusttype::{point, Font, Scale};
 
 const JACKET_OFFSET: u32 = 30;
@@ -132,7 +132,7 @@ fn transparent_text_box(text: &str, font: &Font<'static>, scale: Scale) -> Dynam
 
 fn get_kmeans_colors(data: &[u8]) -> Vec<CentroidData<Lab>> {
     let lab: Vec<Lab> =
-        Srgb::from_raw_slice(data).iter().map(|x| x.into_format().into_color()).collect();
+        palette::cast::from_component_slice::<Srgb<u8>>(data).iter().map(|x| x.into_format().into_color()).collect();
 
     let mut res = kmeans_colors::Kmeans::new();
     for i in 0..5 {
@@ -165,7 +165,7 @@ fn find_best_colors(image: &[u8]) -> GradientColors {
     res.sort_unstable_by(|a, b| (b.percentage).partial_cmp(&a.percentage).unwrap());
     let mut res = res.iter().filter_map(|x| color_filter(x, 2.1, 0.8)).collect::<Vec<Rgb>>();
     res.dedup();
-
+	log::info!("{:?}",res);
     GradientColors {
         plain: palette_to_rgb_pixel(res.first().unwrap()),
         gradient: (!dominant_colors.is_empty() || dominant_colors.len() > 1)
@@ -271,6 +271,7 @@ pub fn generate_card(
         let avg_luminance = is_genres
             .then_some(match bg_type.as_str() {
                 "plain" => luminance(&canvas_assets.colors.plain),
+				"inverted" => luminance(&canvas_assets.colors.gradient_start()),
                 _ => luminance(&canvas_assets.colors.gradient_end()),
             })
             .unwrap_or(match bg_type.as_str() {
