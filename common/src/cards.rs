@@ -7,7 +7,7 @@ use image::{
 };
 use imageproc::drawing::{draw_text_mut, text_size};
 use kmeans_colors::{CentroidData, Sort};
-use palette::{rgb::Rgb, IntoColor, Lab, Pixel as PalettePixel, Srgb};
+use palette::{rgb::Rgb, IntoColor, Lab, Srgb};
 use rusttype::{point, Font, Scale};
 
 const JACKET_OFFSET: u32 = 30;
@@ -24,14 +24,26 @@ const REGEX_JA: &str =
     r"[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\uff66-\uff9f\u3131-\uD79D]";
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct ColorSelectorEmit {
+    pub new_color: Rgba<u8>,
+    pub row: String,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct GradientColors {
     pub plain: Rgba<u8>,
     pub gradient: Option<(Rgba<u8>, Rgba<u8>)>,
+    pub custom_gradient: Option<(Rgba<u8>, Rgba<u8>)>,
+    pub all_colors: Vec<Rgba<u8>>,
 }
 
 impl GradientColors {
-    pub fn gradient_blend(&self) -> Rgba<u8> {
-        let (start, end) = self.gradient.unwrap();
+    pub fn gradient_blend(&self, is_custom_gradient: bool) -> Rgba<u8> {
+        let (start, end) = match is_custom_gradient {
+            false => self.gradient.unwrap(),
+            _ => self.custom_gradient.unwrap(),
+        };
+
         let mut blend = start.clone();
         blend.blend(&Rgba([end[0], end[1], end[2], 127]));
         blend
@@ -44,12 +56,18 @@ impl GradientColors {
         blend
     }
 
-    pub fn gradient_start(&self) -> Rgba<u8> {
-        self.gradient.unwrap().0
+    pub fn gradient_start(&self, is_custom_gradient: bool) -> Rgba<u8> {
+        match is_custom_gradient {
+            false => self.gradient.unwrap().0,
+            _ => self.custom_gradient.unwrap().0,
+        }
     }
 
-    pub fn gradient_end(&self) -> Rgba<u8> {
-        self.gradient.unwrap().1
+    pub fn gradient_end(&self, is_custom_gradient: bool) -> Rgba<u8> {
+        match is_custom_gradient {
+            false => self.gradient.unwrap().1,
+            _ => self.custom_gradient.unwrap().1,
+        }
     }
 }
 
@@ -131,12 +149,14 @@ fn transparent_text_box(text: &str, font: &Font<'static>, scale: Scale) -> Dynam
 }
 
 fn get_kmeans_colors(data: &[u8]) -> Vec<CentroidData<Lab>> {
-    let lab: Vec<Lab> =
-        Srgb::from_raw_slice(data).iter().map(|x| x.into_format().into_color()).collect();
+    let lab: Vec<Lab> = palette::cast::from_component_slice::<Srgb<u8>>(data)
+        .iter()
+        .map(|x| x.into_format().into_color())
+        .collect();
 
     let mut res = kmeans_colors::Kmeans::new();
-    for i in 0..5 {
-        let run_res = kmeans_colors::get_kmeans_hamerly(8, 20, 5.0, false, &lab, 0 + i as u64);
+    for i in 0..8 {
+        let run_res = kmeans_colors::get_kmeans_hamerly(9, 20, 5.0, false, &lab, 0 + i as u64);
         (run_res.score < res.score).then(|| res = run_res);
     }
 
@@ -156,26 +176,38 @@ fn find_best_colors(image: &[u8]) -> GradientColors {
         Rgba([(rgb.red * 255.0) as u8, (rgb.green * 255.0) as u8, (rgb.blue * 255.0) as u8, 255])
     };
 
-    let mut res = get_kmeans_colors(image);
+    let mut res: Vec<CentroidData<Lab>> = get_kmeans_colors(image);
 
-    let mut dominant_colors =
-        res.iter().filter_map(|x| color_filter(x, 2.3, 0.8)).collect::<Vec<Rgb>>();
-    dominant_colors.dedup();
-
-    res.sort_unstable_by(|a, b| (b.percentage).partial_cmp(&a.percentage).unwrap());
-    let mut res = res.iter().filter_map(|x| color_filter(x, 2.1, 0.8)).collect::<Vec<Rgb>>();
-    res.dedup();
-
-    GradientColors {
-        plain: palette_to_rgb_pixel(res.first().unwrap()),
-        gradient: (!dominant_colors.is_empty() || dominant_colors.len() > 1)
+    let gradient = {
+        let mut dominant_colors =
+            res.iter().filter_map(|x| color_filter(x, 2.9, 0.7)).collect::<Vec<Rgb>>();
+        dominant_colors.dedup();
+        (!dominant_colors.is_empty() || dominant_colors.len() > 1)
             .then(|| {
-                let brightest = palette_to_rgb_pixel(dominant_colors.last().unwrap());
+                let brightest =
+                    palette_to_rgb_pixel(dominant_colors.get(dominant_colors.len() - 2).unwrap());
                 let darkest = palette_to_rgb_pixel(dominant_colors.first().unwrap());
 
                 (brightest, darkest)
             })
-            .or(None),
+            .or(None)
+    };
+
+    res.sort_unstable_by(|a, b| (b.percentage).partial_cmp(&a.percentage).unwrap());
+    let plain = res.iter().filter_map(|x| color_filter(x, 2.1, 0.8)).collect::<Vec<Rgb>>();
+
+    let all_colors = {
+        let mut color_list =
+            res.iter().filter_map(|x| color_filter(x, 2.9, 0.7)).collect::<Vec<Rgb>>();
+        color_list.dedup();
+        color_list.iter().map(|x| palette_to_rgb_pixel(x)).collect()
+    };
+
+    GradientColors {
+        plain: palette_to_rgb_pixel(plain.first().unwrap()),
+        gradient,
+        custom_gradient: gradient,
+        all_colors,
     }
 }
 
@@ -237,25 +269,21 @@ pub fn generate_card(
 ) -> Vec<u8> {
     let mut canvas =
         DynamicImage::new_rgba8(canvas_assets.canvas_width(), canvas_assets.canvas_height());
+    let is_custom = bg_type == "custom";
 
     match bg_type.as_str() {
         "plain" => {
             vertical_gradient(&mut canvas, &canvas_assets.colors.plain, &canvas_assets.colors.plain)
         }
-        "gradient" => vertical_gradient(
-            &mut canvas,
-            &canvas_assets.colors.gradient_start(),
-            &canvas_assets.colors.gradient_end(),
-        ),
         "inverted" => vertical_gradient(
             &mut canvas,
-            &canvas_assets.colors.gradient_end(),
-            &canvas_assets.colors.gradient_start(),
+            &canvas_assets.colors.gradient_end(false),
+            &canvas_assets.colors.gradient_start(false),
         ),
         _ => vertical_gradient(
             &mut canvas,
-            &canvas_assets.colors.gradient_start(),
-            &canvas_assets.colors.gradient_end(),
+            &canvas_assets.colors.gradient_start(is_custom),
+            &canvas_assets.colors.gradient_end(is_custom),
         ),
     };
 
@@ -271,11 +299,12 @@ pub fn generate_card(
         let avg_luminance = is_genres
             .then_some(match bg_type.as_str() {
                 "plain" => luminance(&canvas_assets.colors.plain),
-                _ => luminance(&canvas_assets.colors.gradient_end()),
+                "inverted" => luminance(&canvas_assets.colors.gradient_start(false)),
+                _ => luminance(&canvas_assets.colors.gradient_end(is_custom)),
             })
             .unwrap_or(match bg_type.as_str() {
                 "plain" => luminance(&canvas_assets.colors.plain),
-                _ => luminance(&canvas_assets.colors.gradient_blend()),
+                _ => luminance(&canvas_assets.colors.gradient_blend(is_custom)),
             });
         (avg_luminance > 0.179)
             .then_some((s.len() == 1).then_some(BLACK).unwrap_or(TRANSPARENT))

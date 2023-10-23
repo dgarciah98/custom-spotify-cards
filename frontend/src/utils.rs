@@ -44,7 +44,7 @@ pub(crate) async fn fetch_data(
     let track: common::model::Track = match api::get_song(id.clone(), mut_token.clone()).await {
         Ok(res) => res,
         Err(err) => match err.to_string().as_str() {
-            "The access token expired" => {
+            "\"The access token expired\"" => {
                 let new_token = api::authorize().await?;
                 mut_token = new_token.clone();
                 api::get_song(id.clone(), new_token).await?

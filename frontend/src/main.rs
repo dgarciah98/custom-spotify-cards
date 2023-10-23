@@ -23,9 +23,9 @@ fn switch(routes: Route) -> Html {
     }
 }
 
-#[function_component(App)]
-fn app() -> Html {
-    let font_size = "font-size: 3vw;";
+#[function_component]
+fn App() -> Html {
+    let font_size = "font-size: 8vmin;";
     let style = "display: flex; justify-content: center; align-items: center;";
     html! {
         <main class="container">

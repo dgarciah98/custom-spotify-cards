@@ -1,15 +1,19 @@
-# Custom Spotify Card Generator
+# [Custom Spotify Card Generator](https://dgarciah98.github.io/custom-spotify-cards)
 
 A Rust + WASM Yew app that generates a custom card image of your favorite song from Spotify.
 
-This is based on the same implementation I did for a Telegram bot, which can be found here [https://github.com/dgarciah98/spotify_uri_bot/tree/image-generation](https://github.com/dgarciah98/spotify_uri_bot/tree/image-generation)
-
 You can find it here: https://dgarciah98.github.io/custom-spotify-cards
+
+This is based on the same implementation I did for a Telegram bot, which can be found here https://github.com/dgarciah98/spotify_uri_bot/tree/image-generation
+
 
 ## How to use it
 You're going to need a Spotify URI for the track you want. How do you get one?
 
-- **Copy Song Link**: just copy the link from your app like you normally would or from your browser
+- **Copy Song Link**: depending of your device, you can do the following
+  - **Mobile**: push on the 'Share' button, then 'More' and finally 'Copy link'
+  - **Desktop**: click the three dots next to the song, then 'Share' and 'Copy Song Link',
+                 or copy directly from the browser
 - **Copy Spotify URI**: on desktop, press ALT while going to the Copy Song Link button
 - **Use Track ID**: taking only the ID itself for the track also works!
 

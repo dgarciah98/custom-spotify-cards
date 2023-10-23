@@ -6,8 +6,8 @@ pub(crate) struct BackgroundButtonsProps {
     pub(crate) onclick: Callback<String>,
 }
 
-#[function_component(BackgroundButtons)]
-pub(crate) fn background_buttons(
+#[function_component]
+pub(crate) fn BackgroundButtons(
     BackgroundButtonsProps { types, onclick }: &BackgroundButtonsProps,
 ) -> Html {
     let capitalize = |s: &str| -> String {
@@ -18,7 +18,7 @@ pub(crate) fn background_buttons(
         }
     };
     let onclick = onclick.clone();
-    types.iter().map(|bg_type| {
+    types.iter().enumerate().map(|(i, bg_type)| {
 		let on_bg_select = {
 			let onclick = onclick.clone();
 			let bg_type = bg_type.clone();
@@ -27,7 +27,13 @@ pub(crate) fn background_buttons(
 			})
 		};
 		html! {
-			<button onclick={on_bg_select} type="button" class="btn btn-secondary">{capitalize(bg_type)}</button>
+			<div>
+				<input type="radio" class="btn-check" name="btnradio" id={format!("btncheck{}",i)} autocomplete="off" />
+				<label onclick={on_bg_select}
+			           style="min-width:13vw; font-size:1.8vw"
+				       type="button" class="btn btn-secondary mx-2"
+				       for={format!("btncheck{}",i)}>{capitalize(bg_type)}</label>
+			</div>
 		}
 	}).collect()
 }
