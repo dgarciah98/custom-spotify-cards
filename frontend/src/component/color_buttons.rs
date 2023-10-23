@@ -27,7 +27,7 @@ pub(crate) fn ColorButtons(ColorButtonsProps { colors, onclick, row }: &ColorBut
 		let mut border = color.clone();
 		border.blend(&Rgba([0,0,0,100]));
 		let button_style = format!(
-			"background-color:{}; border-color:{}; box-shadow: 0 0 0.8vw 0.1vw {}; border-width:0.2vw; min-width:5vw; min-height:5vw; aspect-ratio: 1;",
+			"background-color:{}; border-color:{}; box-shadow: 0 0 0.5vw 0.15vw {}; border-width:0.2vw; min-width:5vw; min-height:5vw; aspect-ratio: 1;",
 			rgb_to_hex(color.clone()),
 			rgb_to_hex(border),
 			rgb_to_hex(border)
@@ -41,7 +41,7 @@ pub(crate) fn ColorButtons(ColorButtonsProps { colors, onclick, row }: &ColorBut
 			})
 		};
 		html! {
-			<button style={button_style} onclick={on_color_select} type="button" class="btn btn-default rounded-circle mx-1" />
+			<button style={button_style} onclick={on_color_select} type="button" class="btn btn-default rounded-circle mx-2" />
 		}
 	}).collect()
 }
