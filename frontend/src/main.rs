@@ -30,7 +30,7 @@ fn App() -> Html {
     html! {
         <main>
 			<HashRouter>
-			   <div class="row">
+			   <div>
 			      <HomeBar />
                </div>
                <div class="container">
