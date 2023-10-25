@@ -6,7 +6,7 @@ use common::{
 use wasm_bindgen_futures::spawn_local;
 use yew::prelude::*;
 
-use crate::component::{bg_buttons::BackgroundButtons, color_buttons::ColorButtons};
+use crate::component::{bg_buttons::BackgroundButtons, color_buttons::ColorButtons, dl_button::DownloadButton};
 
 #[derive(Properties, PartialEq, Debug, Clone)]
 pub struct CardViewProps {
@@ -17,8 +17,8 @@ pub struct CardViewProps {
 pub(crate) fn CardView(props: &CardViewProps) -> Html {
     let style =
         "margin-left: auto;margin-right: auto;margin-top: 2%;margin-bottom: 2%;width: 70vw;";
-    let bg_btn_style = "justify-content: center; align-items: center; margin-top: 2%; margin-bottom: 2%; margin-left: auto; margin-right: auto";
-    let color_btn_style = "justify-content: center; align-items: center; margin-bottom: 1%; margin-left: auto; margin-right: auto";
+    let bg_btn_style = "justify-content: center; align-items: center; margin-top: 1.3vw; margin-bottom: 2vw; margin-left: auto; margin-right: auto";
+    let color_btn_style = "justify-content: center; align-items: center; margin-bottom: 1vw; margin-left: auto; margin-right: auto";
     let btn_class = "btn-toolbar mr-1";
     let image = use_state_eq(|| "".to_owned());
     let prev_bg_type = use_state_eq(|| "".to_owned());
@@ -142,7 +142,10 @@ pub(crate) fn CardView(props: &CardViewProps) -> Html {
           }
           <div class="row">
             <img src={(*image).clone()} style={style} />
-          </div>
+		  </div>
+		  <div class="row">
+            <DownloadButton image={(*image).clone()} />
+		  </div>
         </div>
     }
 }
