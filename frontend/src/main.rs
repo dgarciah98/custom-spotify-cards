@@ -8,6 +8,8 @@ use component::text_input::TextInput;
 use yew::prelude::*;
 use yew_router::prelude::*;
 
+use crate::component::home_bar::HomeBar;
+
 #[derive(Clone, Routable, PartialEq)]
 enum Route {
     #[at("/:id")]
@@ -25,26 +27,24 @@ fn switch(routes: Route) -> Html {
 
 #[function_component]
 fn App() -> Html {
-    let font_size = "font-size: 8vmin;";
-    let style = "display: flex; justify-content: center; align-items: center;";
     html! {
-        <main class="container">
-            <HashRouter>
-              <div class="row">
-                 <div class="col text-center">
-                    <h1 style={format!("{} {}", style, font_size)}>{ "Custom Spotify Cards" }</h1>
-                 </div>
-              </div>
-              <section class="row">
-                 <div class="col">
-                    <TextInput />
-                 </div>
-              </section>
-            <div style={style}>
-                 <Switch<Route> render={switch} />
-              </div>
-       </HashRouter>
-    </main>
+        <main>
+			<HashRouter>
+			   <div>
+			      <HomeBar />
+               </div>
+               <div class="container">
+                  <section class="row">
+                     <div class="col">
+                        <TextInput />
+                     </div>
+                  </section>
+                  <div style="display: flex; justify-content: center; align-items: center;">
+                     <Switch<Route> render={switch} />
+                  </div>
+			   </div>
+			</HashRouter>
+		</main>
     }
 }
 
