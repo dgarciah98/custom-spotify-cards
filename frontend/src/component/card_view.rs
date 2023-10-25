@@ -142,9 +142,9 @@ pub(crate) fn CardView(props: &CardViewProps) -> Html {
           }
           <div class="row">
             <img src={(*image).clone()} style={style} />
-		  </div>
-		  <div class="row">
-            <DownloadButton image={(*image).clone()} />
+			if !(*image).clone().is_empty() {
+				<DownloadButton image={(*image).clone()} />
+			}
 		  </div>
         </div>
     }

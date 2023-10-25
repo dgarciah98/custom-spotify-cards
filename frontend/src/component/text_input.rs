@@ -9,7 +9,7 @@ use crate::Route;
 #[function_component]
 pub(crate) fn TextInput() -> Html {
     let navigator = use_navigator().unwrap();
-    let style = "display: flex; justify-content: center; align-items: center; font-size: 3.2vmin;";
+    let style = "display: flex; justify-content: center; align-items: center; font-size: 3.2vmin; margin-top: 1vw;";
     let class = use_state(|| "form-control".to_owned());
 
     let onkeypress = {
