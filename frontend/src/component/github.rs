@@ -2,14 +2,12 @@ use yew::prelude::*;
 
 #[function_component]
 pub(crate) fn Github() -> Html {
-	let style = "padding: 0; height: 100%; position: absolute; right: 0; margin-right: 0;";
+	let style = "padding: 0; height: 100%; position: absolute; right: 0;";
 	html! {
-		<a class="navbar-brand navbar-right" {style} href="https://github.com/dgarciah98/custom-spotify-cards" aria-label="View source on GitHub">
+		<a class="navbar-brand me-0" {style} href="https://github.com/dgarciah98/custom-spotify-cards" aria-label="View source on GitHub">
 			<svg
-			   width="100%"
-			   height="100%"
 			   viewBox="0 0 250 250"
-			   style="fill:#151513; color:#fff;"
+			   style="fill:#151513; color:#fff; width: auto; height: 100%; float: right;"
 			   aria-hidden="true"
 			>
 			   <path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z" />
