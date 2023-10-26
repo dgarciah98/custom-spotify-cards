@@ -102,14 +102,6 @@ impl CanvasAssets {
 
 #[derive(Debug, Clone)]
 pub struct TextAssets {
-    pub name: String,
-    pub name_transparent: DynamicImage,
-    pub album: String,
-    pub album_transparent: DynamicImage,
-    pub artists: String,
-    pub artists_transparent: DynamicImage,
-    pub genres: String,
-    pub genres_transparent: DynamicImage,
     pub scales: Vec<Scale>,
     pub font: Font<'static>,
     pub jp_font: Font<'static>,
@@ -125,27 +117,42 @@ fn luminance(color: &Rgba<u8>) -> f32 {
     0.2126 * srgb_to_rgb(color[0]) + 0.7152 * srgb_to_rgb(color[1]) + 0.0722 * srgb_to_rgb(color[2])
 }
 
-fn transparent_text_box(text: &str, font: &Font<'static>, scale: Scale) -> DynamicImage {
-    let v_metrics = font.v_metrics(scale);
-    let glyphs: Vec<_> = font.layout(text, scale, point(20.0, 20.0 + v_metrics.ascent)).collect();
-    let glyphs_height = (v_metrics.ascent - v_metrics.descent).ceil();
-    let glyphs_width = {
-        let min_x = glyphs.first().map(|g| g.pixel_bounding_box().unwrap().min.x).unwrap();
-        let max_x = glyphs.last().map(|g| g.pixel_bounding_box().unwrap().max.x).unwrap();
-        (max_x - min_x) as u32
-    };
-    let height = if glyphs_height > 12.0 { (glyphs_height * 0.8).round() } else { glyphs_height };
-    let y_pos = if height < 11.0 {
-        0
-    } else if height < 48.0 {
-        -(height * 0.1667).round() as i32
-    } else {
-        -8
-    };
-    let mut text_box = DynamicImage::new_rgba8(glyphs_width + 6, height as u32);
-    vertical_gradient(&mut text_box, &BLACK, &BLACK);
-    draw_text_mut(&mut text_box, TRANSPARENT, 2, y_pos, scale, font, text);
-    text_box
+fn generate_text_box(text: &str, font: &Font<'static>, scale: Scale, text_color: Rgba<u8>, is_genres: bool) -> DynamicImage {
+	let v_metrics = font.v_metrics(scale);
+	let glyphs_height = (v_metrics.ascent - v_metrics.descent).ceil();
+	let height = if glyphs_height > 12.0 { (glyphs_height * 0.8).round() } else { glyphs_height };
+	let y_pos = if height < 11.0 {
+		0
+	} else if height < 48.0 {
+		-(height * 0.1667).round() as i32
+	} else {
+		-8
+	};
+	let lines = textwrap::wrap(text, if is_genres { 10000 } else { 36 });
+	let line_values = lines.iter().map(|line| {
+		let glyphs: Vec<_> = font.layout(&line, scale, point(20.0, 20.0 + v_metrics.ascent)).collect();
+		
+		let glyphs_width = {
+			let min_x = glyphs.first().map(|g| g.pixel_bounding_box().unwrap().min.x).unwrap();
+			let max_x = glyphs.last().map(|g| g.pixel_bounding_box().unwrap().max.x).unwrap();
+			(max_x - min_x) as u32
+		};
+		(glyphs_width, line)
+	}).collect::<Vec<_>>();
+
+	let total_height = line_values.len() as f32 * (height.ceil() + 4.0);
+	let glyphs_width = line_values.iter().max_by(|a, b| a.0.cmp(&b.0)).unwrap().0;
+	let mut final_text_box = DynamicImage::new_rgba8(glyphs_width + 6, total_height.ceil() as u32);
+	let mut final_text_box_cursor = 0;
+	line_values.iter().for_each(|val| {
+		let mut text_box = DynamicImage::new_rgba8(val.0 + 6, height.ceil() as u32 + 4);
+		if text_color == TRANSPARENT { vertical_gradient(&mut text_box, &BLACK, &BLACK); }
+		draw_text_mut(&mut text_box, text_color, 2, y_pos, scale, font, &val.1);
+		overlay(&mut final_text_box, &text_box, 0, final_text_box_cursor as i64);
+		final_text_box_cursor += text_box.height() as i32;
+	});
+
+    final_text_box
 }
 
 fn get_kmeans_colors(data: &[u8]) -> Vec<CentroidData<Lab>> {
@@ -230,23 +237,17 @@ pub fn generate_text_assets(card_data: CardData, canvas_assets: CanvasAssets) ->
     let texts = vec![&card_data.name, &card_data.album, &card_data.artists, &card_data.genres];
 
     let mut scales: Vec<Scale> = Vec::new();
-
-    for i in 0..4 {
-        scales.push(adjust_text(
-            texts[i],
-            (i == 3).then_some(Scale::uniform(GENRES_SCALE)).unwrap_or(Scale::uniform(TEXT_SCALE)),
-        ));
+    for i in 0..4 {		
+		let lines_scales = textwrap::wrap(texts[i], 36).iter().map(|line| {
+			adjust_text(
+				line,
+				(i == 3).then_some(Scale::uniform(GENRES_SCALE)).unwrap_or(Scale::uniform(TEXT_SCALE))
+			)
+		}).collect::<Vec<_>>();
+		scales.push(*lines_scales.iter().min_by(|a, b| (a.x).partial_cmp(&b.x).unwrap()).unwrap());
     }
 
     TextAssets {
-        name: card_data.name.to_string(),
-        name_transparent: transparent_text_box(texts[0], select_font(texts[0]), scales[0]),
-        album: card_data.album.to_string(),
-        album_transparent: transparent_text_box(texts[1], select_font(texts[1]), scales[1]),
-        artists: card_data.artists.to_string(),
-        artists_transparent: transparent_text_box(texts[2], select_font(texts[2]), scales[2]),
-        genres: card_data.genres.to_string(),
-        genres_transparent: transparent_text_box(texts[3], select_font(texts[3]), scales[3]),
         scales,
         font,
         jp_font,
@@ -289,11 +290,7 @@ pub fn generate_card(
 
     overlay(&mut canvas, &canvas_assets.jacket, JACKET_OFFSET as i64, JACKET_OFFSET as i64);
 
-    let name_y_pos = TEXT_OFFSET_Y as i32;
-    let album_y_pos = (TEXT_OFFSET_Y * 2 + TEXT_SPACING) as i32;
-    let artists_y_pos = (TEXT_OFFSET_Y * 3 + TEXT_SPACING * 2) as i32;
     let genres_y_pos = (canvas_assets.canvas_height() - JACKET_OFFSET - 15) as i32;
-    let y_pos = vec![name_y_pos, album_y_pos, artists_y_pos, genres_y_pos];
 
     let text_color = |s: &str, is_genres: bool| {
         let avg_luminance = is_genres
@@ -312,55 +309,54 @@ pub fn generate_card(
     };
 
     let texts = vec![&card_data.name, &card_data.album, &card_data.artists, &card_data.genres];
-    let transparent_texts = vec![
-        &text_assets.name_transparent,
-        &text_assets.album_transparent,
-        &text_assets.artists_transparent,
-        &text_assets.genres_transparent,
-    ];
 
     let select_font = |s: &str| {
         text_assets.regex.is_match(s).then_some(&text_assets.jp_font).unwrap_or(&text_assets.font)
     };
 
-    let color_by_idx = |i: usize| text_color(texts[i], if i == 3 { true } else { false });
-    let text_box_offset = |i: usize, text: &DynamicImage| {
+    let color_by_idx = |i: usize| text_color(texts[i], i == 3);
+    let text_box_offset = |text: &DynamicImage, cursor: i64| {
         if text.height() < 11 {
-            y_pos[i] as i64
+            cursor
         } else if text.height() < 48 {
-            y_pos[i] as i64 + (text.height() as f32 * 0.1667).round() as i64
+            cursor + (text.height() as f32 * 0.1667).round() as i64
         } else {
-            y_pos[i] as i64 + 8
+            cursor + 8
         }
     };
-    let y_offset_by_idx = |i: usize, text: &DynamicImage| {
-        (i == 3).then_some(y_pos[i] as i64).unwrap_or(text_box_offset(i, text))
+    let y_offset_by_idx = |i: usize, text: &DynamicImage, cursor: i64| {
+        (i == 3).then_some(genres_y_pos as i64).unwrap_or(text_box_offset(text, cursor))
     };
 
+	let mut y_pos_cursor = TEXT_OFFSET_Y as i64;
     for i in 0..4 {
-        if i == 1 && &card_data.album_type == "single" {
+		if i == 3 && color_by_idx(i) != TRANSPARENT {
+			draw_text_mut(
+				&mut canvas,
+				color_by_idx(i),
+				canvas_assets.text_offset_x() as i32,
+				genres_y_pos,
+				text_assets.scales[i],
+				select_font(texts[i]),
+				texts[i],
+			);		
             continue;
         }
+		
+		let text_box = generate_text_box(texts[i], select_font(texts[i]), text_assets.scales[i], color_by_idx(i), i == 3);
 
-        if color_by_idx(i) == TRANSPARENT {
-            overlay(
-                &mut canvas,
-                transparent_texts[i],
-                canvas_assets.text_offset_x() as i64 - 2,
-                y_offset_by_idx(i, transparent_texts[i]),
-            );
+		if i == 1 && &card_data.album_type == "single" {
+			y_pos_cursor += (text_box.height() + TEXT_SPACING) as i64;
             continue;
         }
-
-        draw_text_mut(
+		
+		overlay(
             &mut canvas,
-            color_by_idx(i),
-            canvas_assets.text_offset_x() as i32,
-            y_pos[i],
-            text_assets.scales[i],
-            select_font(texts[i]),
-            texts[i],
+            &text_box,
+            canvas_assets.text_offset_x() as i64 - 2,
+            y_offset_by_idx(i, &text_box, y_pos_cursor),
         );
+		y_pos_cursor += (text_box.height() + TEXT_SPACING) as i64;
     }
 
     let mut buffer: Vec<u8> = vec![];
