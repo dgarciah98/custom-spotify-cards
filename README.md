@@ -22,9 +22,9 @@ Keep in mind that it has to be a ***track***, that is the resulting URI has to b
 ## TODO
 
 - [x] Deploy to Github Pages
-- [ ] Add options to generate an image with plain color background (or inverted gradient)
+- [x] Add options to generate an image with different color backgrounds
 - [ ] Add some examples to the readme
-- [ ] Definitely make the webpage less ugly
+- [x] Definitely make the webpage less ugly
 - [ ] Add more details to the readme
 - [ ] Add explanations on how to run and set up the project
 - [ ] Maybe upload a backend version???
