@@ -330,34 +330,36 @@ pub fn generate_card(
 
 	let mut y_pos_cursor = TEXT_OFFSET_Y as i64;
     for i in 0..4 {
-		if i == 3 && color_by_idx(i) != TRANSPARENT {
-			draw_text_mut(
-				&mut canvas,
-				color_by_idx(i),
-				canvas_assets.text_offset_x() as i32,
-				genres_y_pos,
-				text_assets.scales[i],
-				select_font(texts[i]),
-				texts[i],
-			);		
-            continue;
-        }
-		
-		let text_box = generate_text_box(texts[i], select_font(texts[i]), text_assets.scales[i], color_by_idx(i), i == 3);
+		if texts[i] != "" {
+			if i == 3 && color_by_idx(i) != TRANSPARENT {
+				draw_text_mut(
+					&mut canvas,
+					color_by_idx(i),
+					canvas_assets.text_offset_x() as i32,
+					genres_y_pos,
+					text_assets.scales[i],
+					select_font(texts[i]),
+					texts[i],
+				);		
+				continue;
+			}
+			
+			let text_box = generate_text_box(texts[i], select_font(texts[i]), text_assets.scales[i], color_by_idx(i), i == 3);
 
-		if i == 1 && &card_data.album_type == "single" {
+			if i == 1 && &card_data.album_type == "single" {
+				y_pos_cursor += (text_box.height() + TEXT_SPACING) as i64;
+				continue;
+			}
+			
+			overlay(
+				&mut canvas,
+				&text_box,
+				canvas_assets.text_offset_x() as i64 - 2,
+				y_offset_by_idx(i, &text_box, y_pos_cursor),
+			);
 			y_pos_cursor += (text_box.height() + TEXT_SPACING) as i64;
-            continue;
-        }
-		
-		overlay(
-            &mut canvas,
-            &text_box,
-            canvas_assets.text_offset_x() as i64 - 2,
-            y_offset_by_idx(i, &text_box, y_pos_cursor),
-        );
-		y_pos_cursor += (text_box.height() + TEXT_SPACING) as i64;
-    }
+		}
+	}
 
     let mut buffer: Vec<u8> = vec![];
     canvas.write_to(&mut Cursor::new(&mut buffer), image::ImageOutputFormat::Png).unwrap();
